@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptLab — Test & Manage Your AI Prompts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ── */
+    :root {
+      --bg-base:      #0e0f11;
+      --bg-elevated:  #16181c;
+      --bg-overlay:   #1e2128;
+      --bg-hover:     #252830;
+      --bg-input:     #1a1d23;
+
+      --border:       #2a2d35;
+      --border-focus: #4a90e2;
+      --border-accent:#3a5fa0;
+
+      --text-primary: #e8eaf0;
+      --text-secondary:#8b90a0;
+      --text-muted:   #555a6a;
+      --text-accent:  #5b9cf6;
+      --text-danger:  #f87171;
+      --text-success: #4ade80;
+      --text-warning: #fb923c;
+
+      --accent:       #5b9cf6;
+      --accent-dim:   #1e3a5f;
+      --accent-glow:  rgba(91,156,246,0.15);
+
+      --green:        #4ade80;
+      --green-dim:    #14532d;
+      --red:          #f87171;
+      --red-dim:      #450a0a;
+      --orange:       #fb923c;
+
+      --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+      --font-ui:      'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+      --radius-sm:    4px;
+      --radius-md:    8px;
+      --radius-lg:    12px;
+
+      --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md:    0 4px 12px rgba(0,0,0,0.5);
+      --shadow-lg:    0 8px 32px rgba(0,0,0,0.6);
+
+      --sidebar-width: 240px;
+      --header-height: 52px;
+
+      --transition: 150ms ease;
+    }
+
+    /* Light theme */
+    body.light {
+      --bg-base:      #f4f5f7;
+      --bg-elevated:  #ffffff;
+      --bg-overlay:   #f9fafb;
+      --bg-hover:     #eef0f4;
+      --bg-input:     #ffffff;
+      --border:       #dde0e8;
+      --border-focus: #3b82f6;
+      --border-accent:#93b8f5;
+      --text-primary: #111318;
+      --text-secondary:#4b5563;
+      --text-muted:   #9ca3af;
+      --text-accent:  #2563eb;
+      --accent:       #2563eb;
+      --accent-dim:   #dbeafe;
+      --accent-glow:  rgba(37,99,235,0.08);
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      transition: background var(--transition), color var(--transition);
+    }
+    button { cursor: pointer; font-family: inherit; border: none; background: none; }
+    input, textarea, select { font-family: inherit; }
+    a { color: var(--text-accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Scrollbars ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ── Layout ── */
+    #app {
+      display: grid;
+      grid-template-rows: var(--header-height) 1fr;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      height: 100vh;
+    }
+
+    /* ── Header ── */
+    #header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    .header-brand h1 {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+    .header-brand .brand-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--accent);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      background: var(--bg-elevated);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-search {
+      padding: 10px 10px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-input-wrap {
+      position: relative;
+    }
+    .search-input-wrap svg {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .search-input-wrap input {
+      width: 100%;
+      padding: 6px 8px 6px 30px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .search-input-wrap input:focus { border-color: var(--border-focus); }
+    .search-input-wrap input::placeholder { color: var(--text-muted); }
+
+    .sidebar-new-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      color: var(--text-accent);
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+    .sidebar-new-btn:hover { background: var(--accent-glow); }
+
+    #prompt-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    .prompt-category {
+      padding: 6px 12px 2px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .prompt-item {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0;
+      cursor: pointer;
+      position: relative;
+    }
+    .prompt-item-btn {
+      flex: 1;
+      text-align: left;
+      padding: 7px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: background var(--transition), color var(--transition);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-radius: 0;
+    }
+    .prompt-item-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .prompt-item.active .prompt-item-btn {
+      background: var(--accent-dim);
+      color: var(--text-accent);
+      font-weight: 500;
+    }
+    .prompt-item-del {
+      padding: 7px 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity var(--transition), color var(--transition);
+      flex-shrink: 0;
+    }
+    .prompt-item:hover .prompt-item-del { opacity: 1; }
+    .prompt-item-del:hover { color: var(--red); }
+
+    /* ── Main ── */
+    #main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-base);
+    }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      padding: 0 16px;
+      height: 44px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      transition: color var(--transition), border-color var(--transition);
+    }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active { color: var(--text-accent); border-bottom-color: var(--accent); }
+
+    .tab-panel { display: none; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Editor Panel ── */
+    #panel-editor {
+      padding: 20px;
+      overflow-y: auto;
+      gap: 16px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .field-group label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .field-group input,
+    .field-group select,
+    .field-group textarea {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--transition);
+      width: 100%;
+    }
+    .field-group input:focus,
+    .field-group select:focus,
+    .field-group textarea:focus { border-color: var(--border-focus); }
+    .field-group textarea {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      resize: vertical;
+      min-height: 160px;
+      line-height: 1.6;
+    }
+    .field-group select option { background: var(--bg-overlay); }
+
+    /* Variables section */
+    .variables-section {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+    .variables-header {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .var-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .var-item label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-accent);
+      display: block;
+      margin-bottom: 4px;
+      font-family: var(--font-mono);
+    }
+    .var-item input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 6px 8px;
+      font-size: 12px;
+      outline: none;
+      transition: border-color var(--transition);
+      font-family: var(--font-mono);
+    }
+    .var-item input:focus { border-color: var(--border-focus); }
+    .no-vars {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Rendered preview */
+    .preview-section {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-overlay);
+    }
+    .preview-header-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .preview-body {
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 80px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .preview-var-highlight { color: var(--accent); font-weight: 600; }
+
+    /* Runner row */
+    .runner-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .runner-row select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 7px 10px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--transition);
+      cursor: pointer;
+    }
+    .runner-row select:focus { border-color: var(--border-focus); }
+    .runner-row select option { background: var(--bg-overlay); }
+    .runner-row label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      transition: background var(--transition), color var(--transition), border-color var(--transition), opacity var(--transition);
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover { background: #4a88e0; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--bg-overlay);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-ghost {
+      color: var(--text-secondary);
+      padding: 6px 10px;
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(248,113,113,0.2);
+    }
+    .btn-danger:hover { background: rgba(248,113,113,0.2); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    /* ── Results ── */
+    #panel-results {
+      overflow-y: auto;
+      padding: 20px;
+      gap: 16px;
+    }
+    .result-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-overlay);
+    }
+    .result-model-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-accent);
+      background: var(--accent-dim);
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+    .result-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+      flex: 1;
+    }
+    .result-meta span { display: flex; align-items: center; gap: 4px; }
+    .result-body {
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+    .result-body.streaming { border-left: 2px solid var(--accent); }
+    .result-body.streaming::after {
+      content: '▊';
+      animation: blink 0.8s step-end infinite;
+      color: var(--accent);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .result-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ── History Panel ── */
+    #panel-history {
+      overflow-y: auto;
+      padding: 20px;
+      gap: 12px;
+    }
+    .history-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .history-compare-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .history-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .history-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color var(--transition);
+    }
+    .history-card:hover { border-color: var(--border-accent); }
+    .history-card.selected-compare { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .history-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-overlay);
+      border-bottom: 1px solid var(--border);
+    }
+    .history-card-body {
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      max-height: 120px;
+      overflow: hidden;
+      position: relative;
+    }
+    .history-card-body::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(transparent, var(--bg-elevated));
+    }
+    .compare-panel {
+      display: none;
+      gap: 12px;
+    }
+    .compare-panel.visible { display: grid; grid-template-columns: 1fr 1fr; }
+    .compare-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .compare-header {
+      padding: 10px 14px;
+      background: var(--bg-overlay);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-accent);
+    }
+    .compare-body {
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    /* ── Settings Panel ── */
+    #panel-settings {
+      overflow-y: auto;
+      padding: 24px;
+      gap: 24px;
+    }
+    .settings-section {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .settings-section-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--bg-overlay);
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label {
+      flex: 1;
+    }
+    .settings-row-label strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+    .settings-row-label span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .apikey-input-wrap {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      min-width: 280px;
+    }
+    .apikey-input-wrap input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .apikey-input-wrap input:focus { border-color: var(--border-focus); }
+    .apikey-status {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .apikey-status.set { color: var(--green); }
+    .apikey-status.unset { color: var(--text-muted); }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--bg-overlay);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      transition: var(--transition);
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      top: 2px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: var(--transition);
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+      background: white;
+    }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--bg-overlay);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.2s ease;
+      pointer-events: auto;
+      max-width: 360px;
+    }
+    .toast.success { border-color: rgba(74,222,128,0.3); }
+    .toast.error { border-color: rgba(248,113,113,0.3); }
+    .toast.info { border-color: var(--border-accent); }
+    .toast-icon { flex-shrink: 0; }
+    @keyframes slideIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(20px); opacity: 0; }
+    }
+    .toast.removing { animation: slideOut 0.2s ease forwards; }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.visible { display: flex; }
+    .modal {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .modal p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal textarea {
+      width: 100%;
+      min-height: 120px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      resize: vertical;
+      margin-bottom: 16px;
+    }
+    .modal textarea:focus { border-color: var(--border-focus); }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .empty-state svg { opacity: 0.3; }
+    .empty-state h3 { font-size: 16px; color: var(--text-secondary); }
+    .empty-state p { font-size: 13px; max-width: 280px; }
+
+    /* ── Footer ── */
+    #footer {
+      grid-column: 1 / -1;
+      padding: 0 20px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 11px;
+      color: var(--text-muted);
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* Kbd */
+    kbd {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      background: var(--bg-overlay);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: var(--text-muted);
+    }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 680px) {
+      :root { --sidebar-width: 0px; }
+      #app {
+        grid-template-columns: 1fr;
+      }
+      #sidebar {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: var(--header-height);
+        bottom: 32px;
+        width: 260px;
+        z-index: 50;
+        box-shadow: var(--shadow-lg);
+      }
+      #sidebar.mobile-open { display: flex; }
+      #mobile-menu-btn { display: flex !important; }
+      .field-row { grid-template-columns: 1fr; }
+      .runner-row { gap: 8px; }
+      .compare-panel.visible { grid-template-columns: 1fr; }
+      .apikey-input-wrap { min-width: 0; width: 100%; }
+      .settings-row { flex-wrap: wrap; }
+    }
+    #mobile-menu-btn { display: none; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="header" role="banner">
+      <button id="mobile-menu-btn" class="btn btn-ghost btn-sm" aria-label="Toggle sidebar" aria-expanded="false" aria-controls="sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="header-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <h1>PromptLab</h1>
+        <span class="brand-badge">BETA</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-import-global" class="btn btn-ghost btn-sm" aria-label="Import data">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Import
+        </button>
+        <button id="btn-export-global" class="btn btn-ghost btn-sm" aria-label="Export data">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Export
+        </button>
+        <button id="btn-settings-tab" class="btn btn-ghost btn-sm" aria-label="Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          Settings
+        </button>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" aria-label="Prompt library">
+      <div class="sidebar-search">
+        <div class="search-input-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" id="search-input" placeholder="Search prompts…" aria-label="Search prompts">
+        </div>
+      </div>
+      <button class="sidebar-new-btn" id="btn-new-prompt" aria-label="New prompt">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Prompt
+      </button>
+      <div id="prompt-list" role="listbox" aria-label="Saved prompts"></div>
+    </nav>
+
+    <!-- Main -->
+    <main id="main" role="main">
+      <div class="tab-bar" role="tablist" aria-label="Sections">
+        <button class="tab-btn active" role="tab" aria-selected="true" data-tab="editor">Editor</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="results">Results</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="history">History</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="settings">Settings</button>
+      </div>
+
+      <!-- Editor Tab -->
+      <div id="panel-editor" class="tab-panel active" role="tabpanel" aria-label="Prompt editor">
+        <div class="field-row">
+          <div class="field-group">
+            <label for="prompt-name">Prompt Name</label>
+            <input type="text" id="prompt-name" placeholder="e.g. Code Review" autocomplete="off">
+          </div>
+          <div class="field-group">
+            <label for="prompt-category">Category</label>
+            <input type="text" id="prompt-category" placeholder="e.g. Engineering" list="category-list" autocomplete="off">
+            <datalist id="category-list"></datalist>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="prompt-content">Prompt Content <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);font-size:11px;">— use {variable} for dynamic values</span></label>
+          <textarea id="prompt-content" placeholder="You are a {role} reviewing the following {language} code:&#10;&#10;```&#10;{code}&#10;```" rows="8"></textarea>
+        </div>
+
+        <!-- Variables -->
+        <div class="variables-section">
+          <div class="variables-header">Variables</div>
+          <div class="var-grid" id="var-grid">
+            <p class="no-vars">No {variables} detected yet.</p>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-section">
+          <div class="preview-header">
+            <span class="preview-header-label">Rendered Preview</span>
+            <button class="btn btn-secondary btn-sm" id="btn-copy-prompt" aria-label="Copy rendered prompt">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy
+            </button>
+          </div>
+          <div class="preview-body" id="preview-body" aria-live="polite"></div>
+        </div>
+
+        <!-- Runner -->
+        <div class="field-group">
+          <label>Test Runner</label>
+          <div class="runner-row">
+            <label for="provider-select">Provider</label>
+            <select id="provider-select" aria-label="AI provider">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="google">Google</option>
+            </select>
+            <label for="model-select">Model</label>
+            <select id="model-select" aria-label="AI model"></select>
+            <button class="btn btn-primary" id="btn-run" aria-label="Run test (Ctrl+Enter)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Run Test
+            </button>
+            <button class="btn btn-secondary" id="btn-save" aria-label="Save prompt (Ctrl+S)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save
+            </button>
+          </div>
+          <div style="margin-top:6px;">
+            <kbd>Ctrl+S</kbd> Save &nbsp; <kbd>Ctrl+Enter</kbd> Run
+          </div>
+        </div>
+
+        <div id="result-live" style="display:none;">
+          <div class="result-card">
+            <div class="result-card-header">
+              <span class="result-model-badge" id="live-model-badge">—</span>
+              <div class="result-meta">
+                <span id="live-tokens">—</span>
+                <span id="live-latency">—</span>
+              </div>
+              <button class="btn btn-ghost btn-sm" id="btn-stop-stream" style="display:none;" aria-label="Stop generation">Stop</button>
+            </div>
+            <div class="result-body" id="live-result-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Tab -->
+      <div id="panel-results" class="tab-panel" role="tabpanel" aria-label="Test results">
+        <div class="result-empty" id="results-empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          <h3>No results yet</h3>
+          <p>Run a test in the Editor tab to see results here.</p>
+        </div>
+        <div id="results-list"></div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="panel-history" class="tab-panel" role="tabpanel" aria-label="Test history">
+        <div class="history-controls" style="flex-shrink:0;padding:0 0 4px;">
+          <button class="btn btn-secondary btn-sm" id="btn-clear-history">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Clear History
+          </button>
+          <span class="history-compare-hint" id="compare-hint">Select 2 entries to compare side-by-side</span>
+        </div>
+        <div class="compare-panel" id="compare-panel"></div>
+        <div class="history-cards" id="history-list"></div>
+        <div class="result-empty" id="history-empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <h3>No history yet</h3>
+          <p>Your test runs will appear here.</p>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="panel-settings" class="tab-panel" role="tabpanel" aria-label="Settings">
+        <!-- API Keys -->
+        <div class="settings-section">
+          <div class="settings-section-header">API Keys (stored locally)</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>OpenAI</strong>
+              <span>gpt-4o, gpt-4o-mini, o3-mini</span>
+            </div>
+            <div class="apikey-input-wrap">
+              <input type="password" id="key-openai" placeholder="sk-…" aria-label="OpenAI API key" autocomplete="off">
+              <button class="btn btn-secondary btn-sm" onclick="App.saveApiKey('openai')">Save</button>
+              <span class="apikey-status" id="key-openai-status">—</span>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>Anthropic</strong>
+              <span>claude-sonnet-4, claude-haiku-4-5</span>
+            </div>
+            <div class="apikey-input-wrap">
+              <input type="password" id="key-anthropic" placeholder="sk-ant-…" aria-label="Anthropic API key" autocomplete="off">
+              <button class="btn btn-secondary btn-sm" onclick="App.saveApiKey('anthropic')">Save</button>
+              <span class="apikey-status" id="key-anthropic-status">—</span>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>Google</strong>
+              <span>gemini-2.0-flash, gemini-2.5-pro</span>
+            </div>
+            <div class="apikey-input-wrap">
+              <input type="password" id="key-google" placeholder="AIza…" aria-label="Google API key" autocomplete="off">
+              <button class="btn btn-secondary btn-sm" onclick="App.saveApiKey('google')">Save</button>
+              <span class="apikey-status" id="key-google-status">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="settings-section">
+          <div class="settings-section-header">Appearance</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>Light Theme</strong>
+              <span>Toggle between dark and light mode</span>
+            </div>
+            <label class="toggle" aria-label="Toggle light theme">
+              <input type="checkbox" id="theme-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="settings-section">
+          <div class="settings-section-header">Data Management</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>Export All Data</strong>
+              <span>Download all prompts and history as JSON</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-export-data">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Export JSON
+            </button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>Import Data</strong>
+              <span>Restore from a previously exported JSON file</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-import-data">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Import JSON
+            </button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <strong>Reset All Data</strong>
+              <span>Delete all prompts, history, and settings</span>
+            </div>
+            <button class="btn btn-danger btn-sm" id="btn-reset-all">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              Reset Everything
+            </button>
+          </div>
+        </div>
+
+        <!-- Shortcuts -->
+        <div class="settings-section">
+          <div class="settings-section-header">Keyboard Shortcuts</div>
+          <div class="settings-row">
+            <div class="settings-row-label"><strong>Save prompt</strong></div>
+            <kbd>Ctrl + S</kbd>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label"><strong>Run test</strong></div>
+            <kbd>Ctrl + Enter</kbd>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label"><strong>New prompt</strong></div>
+            <kbd>Ctrl + N</kbd>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer id="footer" role="contentinfo">
+    <span>Built with ❤️ by MoneyMonkey</span>
+    <span>|</span>
+    <a href="https://li195111.github.io/ai-dev-toolkit/" target="_blank" rel="noopener noreferrer">Get the AI Developer Toolkit →</a>
+  </footer>
+
+  <!-- Toast container -->
+  <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- Import modal -->
+  <div class="modal-backdrop" id="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <div class="modal">
+      <h2 id="import-modal-title">Import Data</h2>
+      <p>Paste your exported JSON below. Existing data will be merged (prompts with the same ID will be overwritten).</p>
+      <textarea id="import-textarea" placeholder='{"prompts":[...],"history":[...]}'></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="btn-import-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-import-confirm">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm modal -->
+  <div class="modal-backdrop" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+    <div class="modal">
+      <h2 id="confirm-modal-title">Confirm Action</h2>
+      <p id="confirm-modal-body">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="btn-confirm-cancel">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="file-input" accept=".json" style="display:none;" aria-hidden="true">
+
+  <script>
+  'use strict';
+
+  /* ══════════════════════════════════════════════
+     Storage helpers
+  ══════════════════════════════════════════════ */
+  const Store = {
+    get(key, fallback = null) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw === null ? fallback : JSON.parse(raw);
+      } catch { return fallback; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {
+        console.error('localStorage write failed:', e);
+      }
+    },
+    remove(key) { localStorage.removeItem(key); }
+  };
+
+  /* ══════════════════════════════════════════════
+     XSS-safe escaping
+  ══════════════════════════════════════════════ */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /* ══════════════════════════════════════════════
+     Toast notifications
+  ══════════════════════════════════════════════ */
+  const Toast = {
+    icons: {
+      success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
+      error:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+      info:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b9cf6" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    },
+    show(message, type = 'info', duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span class="toast-icon">${this.icons[type] || this.icons.info}</span><span>${escHtml(message)}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 200);
+      }, duration);
+    }
+  };
+
+  /* ══════════════════════════════════════════════
+     Confirm dialog
+  ══════════════════════════════════════════════ */
+  function confirmDialog(message) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirm-modal');
+      document.getElementById('confirm-modal-body').textContent = message;
+      modal.classList.add('visible');
+      const ok = document.getElementById('btn-confirm-ok');
+      const cancel = document.getElementById('btn-confirm-cancel');
+      function cleanup(result) {
+        modal.classList.remove('visible');
+        ok.removeEventListener('click', handleOk);
+        cancel.removeEventListener('click', handleCancel);
+        resolve(result);
+      }
+      function handleOk() { cleanup(true); }
+      function handleCancel() { cleanup(false); }
+      ok.addEventListener('click', handleOk);
+      cancel.addEventListener('click', handleCancel);
+      modal.addEventListener('click', (e) => { if (e.target === modal) cleanup(false); }, { once: true });
+    });
+  }
+
+  /* ══════════════════════════════════════════════
+     ID generator
+  ══════════════════════════════════════════════ */
+  function genId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  /* ══════════════════════════════════════════════
+     Sample prompts
+  ══════════════════════════════════════════════ */
+  const SAMPLE_PROMPTS = [
+    {
+      id: 'sample-1',
+      name: 'Code Review',
+      category: 'Engineering',
+      content: 'You are a senior {language} engineer. Review the following code for bugs, performance issues, and best practice violations:\n\n```{language}\n{code}\n```\n\nProvide specific, actionable feedback.',
+      createdAt: Date.now() - 86400000 * 3,
+    },
+    {
+      id: 'sample-2',
+      name: 'Explain Like I\'m 5',
+      category: 'Education',
+      content: 'Explain {concept} in simple terms that a 5-year-old would understand. Use analogies and real-world examples. Avoid jargon.',
+      createdAt: Date.now() - 86400000 * 2,
+    },
+    {
+      id: 'sample-3',
+      name: 'Bug Detective',
+      category: 'Engineering',
+      content: 'You are debugging a {language} application. The error is:\n\n{error_message}\n\nThe relevant code is:\n\n```{language}\n{code}\n```\n\nFind the root cause and suggest a precise fix. Explain why this bug occurred.',
+      createdAt: Date.now() - 86400000,
+    },
+  ];
+
+  /* ══════════════════════════════════════════════
+     Model registry
+  ══════════════════════════════════════════════ */
+  const MODELS = {
+    openai: [
+      { id: 'gpt-4o', label: 'GPT-4o' },
+      { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
+      { id: 'o3-mini', label: 'o3-mini' },
+    ],
+    anthropic: [
+      { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+      { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+    ],
+    google: [
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    ],
+  };
+
+  /* ══════════════════════════════════════════════
+     Variable extraction
+  ══════════════════════════════════════════════ */
+  function extractVars(content) {
+    const matches = content.match(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g) || [];
+    return [...new Set(matches.map(m => m.slice(1, -1)))];
+  }
+
+  function renderPrompt(content, vars) {
+    let result = content;
+    for (const [key, val] of Object.entries(vars)) {
+      result = result.replaceAll(`{${key}}`, val || `{${key}}`);
+    }
+    return result;
+  }
+
+  /* ══════════════════════════════════════════════
+     API Callers
+  ══════════════════════════════════════════════ */
+  const API = {
+    async callOpenAI(apiKey, model, prompt, onChunk, signal) {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          stream: true,
+          max_tokens: 4096,
+        }),
+        signal,
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+        for (const line of lines) {
+          const data = line.slice(6);
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content || '';
+            if (delta) { fullText += delta; onChunk(delta); }
+            if (parsed.usage) {
+              inputTokens = parsed.usage.prompt_tokens || 0;
+              outputTokens = parsed.usage.completion_tokens || 0;
+            }
+          } catch { /* skip malformed */ }
+        }
+      }
+      return { text: fullText, inputTokens, outputTokens, total: inputTokens + outputTokens };
+    },
+
+    async callAnthropic(apiKey, model, prompt, onChunk, signal) {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+          stream: true,
+        }),
+        signal,
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.type === 'content_block_delta') {
+                const delta = parsed.delta?.text || '';
+                if (delta) { fullText += delta; onChunk(delta); }
+              }
+              if (parsed.type === 'message_delta' && parsed.usage) {
+                outputTokens = parsed.usage.output_tokens || 0;
+              }
+              if (parsed.type === 'message_start' && parsed.message?.usage) {
+                inputTokens = parsed.message.usage.input_tokens || 0;
+              }
+            } catch { /* skip */ }
+          }
+        }
+      }
+      return { text: fullText, inputTokens, outputTokens, total: inputTokens + outputTokens };
+    },
+
+    async callGoogle(apiKey, model, prompt, onChunk, signal) {
+      // Google doesn't have great browser streaming, use non-streaming
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 4096 },
+          }),
+          signal,
+        }
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const inputTokens = data.usageMetadata?.promptTokenCount || 0;
+      const outputTokens = data.usageMetadata?.candidatesTokenCount || 0;
+      // Simulate streaming for consistent UX
+      onChunk(text);
+      return { text, inputTokens, outputTokens, total: inputTokens + outputTokens };
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+     Main Application
+  ══════════════════════════════════════════════ */
+  const App = {
+    /* State */
+    prompts: [],
+    history: [],
+    currentPromptId: null,
+    varValues: {},
+    compareIds: [],
+    streamController: null,
+
+    /* Init */
+    init() {
+      this.loadData();
+      this.bindEvents();
+      this.renderSidebar();
+      this.updateModelSelect();
+      this.updateCategoryList();
+      this.loadSettings();
+      this.refreshApiKeyStatus();
+      this.renderHistory();
+      this.renderResults();
+
+      // Select first prompt if any
+      if (this.prompts.length > 0) {
+        this.selectPrompt(this.prompts[0].id);
+      } else {
+        this.clearEditor();
+      }
+    },
+
+    loadData() {
+      this.prompts = Store.get('pl_prompts', null);
+      if (this.prompts === null) {
+        // First run — load samples
+        this.prompts = SAMPLE_PROMPTS;
+        Store.set('pl_prompts', this.prompts);
+      }
+      this.history = Store.get('pl_history', []);
+    },
+
+    savePrompts() { Store.set('pl_prompts', this.prompts); },
+    saveHistory() { Store.set('pl_history', this.history); },
+
+    loadSettings() {
+      const theme = Store.get('pl_theme', 'dark');
+      if (theme === 'light') {
+        document.body.classList.add('light');
+        document.getElementById('theme-toggle').checked = true;
+      }
+    },
+
+    /* ── Sidebar ── */
+    renderSidebar(filter = '') {
+      const list = document.getElementById('prompt-list');
+      const lower = filter.toLowerCase();
+      const filtered = this.prompts.filter(p =>
+        !filter || p.name.toLowerCase().includes(lower) || (p.category || '').toLowerCase().includes(lower)
+      );
+
+      // Group by category
+      const groups = {};
+      for (const p of filtered) {
+        const cat = p.category || 'Uncategorized';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(p);
+      }
+
+      list.innerHTML = '';
+      if (filtered.length === 0) {
+        list.innerHTML = '<p style="padding:16px;color:var(--text-muted);font-size:12px;">No prompts found.</p>';
+        return;
+      }
+
+      for (const [cat, items] of Object.entries(groups)) {
+        const catEl = document.createElement('div');
+        catEl.className = 'prompt-category';
+        catEl.textContent = cat;
+        list.appendChild(catEl);
+
+        for (const p of items) {
+          const item = document.createElement('div');
+          item.className = 'prompt-item' + (p.id === this.currentPromptId ? ' active' : '');
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', p.id === this.currentPromptId ? 'true' : 'false');
+
+          const btn = document.createElement('button');
+          btn.className = 'prompt-item-btn';
+          btn.textContent = p.name;
+          btn.setAttribute('aria-label', `Select prompt: ${p.name}`);
+          btn.addEventListener('click', () => this.selectPrompt(p.id));
+
+          const del = document.createElement('button');
+          del.className = 'prompt-item-del';
+          del.setAttribute('aria-label', `Delete prompt: ${p.name}`);
+          del.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+          del.addEventListener('click', (e) => { e.stopPropagation(); this.deletePrompt(p.id); });
+
+          item.appendChild(btn);
+          item.appendChild(del);
+          list.appendChild(item);
+        }
+      }
+    },
+
+    updateCategoryList() {
+      const cats = [...new Set(this.prompts.map(p => p.category).filter(Boolean))];
+      document.getElementById('category-list').innerHTML = cats.map(c => `<option value="${escHtml(c)}">`).join('');
+    },
+
+    /* ── Prompt CRUD ── */
+    selectPrompt(id) {
+      const p = this.prompts.find(x => x.id === id);
+      if (!p) return;
+      this.currentPromptId = id;
+      this.varValues = {};
+      document.getElementById('prompt-name').value = p.name;
+      document.getElementById('prompt-category').value = p.category || '';
+      document.getElementById('prompt-content').value = p.content;
+      this.renderSidebar(document.getElementById('search-input').value);
+      this.updateVars();
+      this.updatePreview();
+      this.switchTab('editor');
+    },
+
+    clearEditor() {
+      this.currentPromptId = null;
+      this.varValues = {};
+      document.getElementById('prompt-name').value = '';
+      document.getElementById('prompt-category').value = '';
+      document.getElementById('prompt-content').value = '';
+      this.renderSidebar();
+      this.updateVars();
+      this.updatePreview();
+    },
+
+    newPrompt() {
+      this.clearEditor();
+      document.getElementById('prompt-name').focus();
+    },
+
+    savePrompt() {
+      const name = document.getElementById('prompt-name').value.trim();
+      if (!name) { Toast.show('Please enter a prompt name.', 'error'); return; }
+      const content = document.getElementById('prompt-content').value;
+      const category = document.getElementById('prompt-category').value.trim();
+
+      if (this.currentPromptId) {
+        const p = this.prompts.find(x => x.id === this.currentPromptId);
+        if (p) { p.name = name; p.content = content; p.category = category; p.updatedAt = Date.now(); }
+      } else {
+        const p = { id: genId(), name, content, category, createdAt: Date.now() };
+        this.prompts.unshift(p);
+        this.currentPromptId = p.id;
+      }
+      this.savePrompts();
+      this.updateCategoryList();
+      this.renderSidebar(document.getElementById('search-input').value);
+      Toast.show('Prompt saved.', 'success');
+    },
+
+    async deletePrompt(id) {
+      const p = this.prompts.find(x => x.id === id);
+      if (!p) return;
+      const ok = await confirmDialog(`Delete "${p.name}"? This cannot be undone.`);
+      if (!ok) return;
+      this.prompts = this.prompts.filter(x => x.id !== id);
+      this.savePrompts();
+      if (this.currentPromptId === id) {
+        this.prompts.length > 0 ? this.selectPrompt(this.prompts[0].id) : this.clearEditor();
+      } else {
+        this.renderSidebar(document.getElementById('search-input').value);
+      }
+      Toast.show('Prompt deleted.', 'info');
+    },
+
+    /* ── Variables ── */
+    updateVars() {
+      const content = document.getElementById('prompt-content').value;
+      const vars = extractVars(content);
+      const grid = document.getElementById('var-grid');
+
+      if (vars.length === 0) {
+        grid.innerHTML = '<p class="no-vars">No {variables} detected yet.</p>';
+        this.varValues = {};
+        return;
+      }
+
+      // Remove vars that no longer exist
+      for (const key of Object.keys(this.varValues)) {
+        if (!vars.includes(key)) delete this.varValues[key];
+      }
+
+      grid.innerHTML = '';
+      for (const v of vars) {
+        const item = document.createElement('div');
+        item.className = 'var-item';
+        const label = document.createElement('label');
+        label.setAttribute('for', `var-${v}`);
+        label.textContent = `{${v}}`;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `var-${v}`;
+        input.placeholder = v;
+        input.value = this.varValues[v] || '';
+        input.setAttribute('aria-label', `Value for variable ${v}`);
+        input.addEventListener('input', (e) => {
+          this.varValues[v] = e.target.value;
+          this.updatePreview();
+        });
+        item.appendChild(label);
+        item.appendChild(input);
+        grid.appendChild(item);
+      }
+    },
+
+    updatePreview() {
+      const content = document.getElementById('prompt-content').value;
+      const rendered = renderPrompt(content, this.varValues);
+      const previewEl = document.getElementById('preview-body');
+      // Highlight unfilled vars
+      const highlighted = escHtml(rendered).replace(
+        /\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g,
+        '<span class="preview-var-highlight">{$1}</span>'
+      );
+      previewEl.innerHTML = highlighted;
+    },
+
+    /* ── Model select ── */
+    updateModelSelect() {
+      const provider = document.getElementById('provider-select').value;
+      const modelSel = document.getElementById('model-select');
+      modelSel.innerHTML = MODELS[provider].map(m => `<option value="${escHtml(m.id)}">${escHtml(m.label)}</option>`).join('');
+    },
+
+    /* ── Test Runner ── */
+    async runTest() {
+      const provider = document.getElementById('provider-select').value;
+      const model = document.getElementById('model-select').value;
+      const content = document.getElementById('prompt-content').value;
+
+      if (!content.trim()) {
+        Toast.show('Prompt content is empty.', 'error');
+        return;
+      }
+
+      const apiKey = Store.get(`pl_key_${provider}`, '');
+      if (!apiKey) {
+        Toast.show(`No ${provider} API key. Set it in Settings.`, 'error');
+        this.switchTab('settings');
+        return;
+      }
+
+      const renderedPrompt = renderPrompt(content, this.varValues);
+      const promptName = document.getElementById('prompt-name').value || 'Untitled';
+
+      // Show live result area
+      const liveEl = document.getElementById('result-live');
+      const liveBody = document.getElementById('live-result-body');
+      const liveBadge = document.getElementById('live-model-badge');
+      const liveTokens = document.getElementById('live-tokens');
+      const liveLatency = document.getElementById('live-latency');
+      const stopBtn = document.getElementById('btn-stop-stream');
+      const runBtn = document.getElementById('btn-run');
+
+      liveEl.style.display = 'block';
+      liveBody.textContent = '';
+      liveBody.classList.add('streaming');
+      liveBadge.textContent = model;
+      liveTokens.textContent = 'Streaming…';
+      liveLatency.textContent = '';
+      stopBtn.style.display = 'inline-flex';
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<span class="spinner"></span> Running…';
+
+      const startTime = Date.now();
+      this.streamController = new AbortController();
+
+      const onChunk = (text) => {
+        liveBody.textContent += text;
+        liveBody.scrollTop = liveBody.scrollHeight;
+      };
+
+      try {
+        let result;
+        if (provider === 'openai') {
+          result = await API.callOpenAI(apiKey, model, renderedPrompt, onChunk, this.streamController.signal);
+        } else if (provider === 'anthropic') {
+          result = await API.callAnthropic(apiKey, model, renderedPrompt, onChunk, this.streamController.signal);
+        } else {
+          result = await API.callGoogle(apiKey, model, renderedPrompt, onChunk, this.streamController.signal);
+        }
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        liveBody.classList.remove('streaming');
+        liveTokens.textContent = `${result.total} tokens (↑${result.inputTokens} / ↓${result.outputTokens})`;
+        liveLatency.textContent = `${elapsed}s`;
+
+        // Save to history
+        const entry = {
+          id: genId(),
+          promptId: this.currentPromptId,
+          promptName,
+          provider,
+          model,
+          renderedPrompt,
+          response: result.text,
+          tokens: result,
+          latencyMs: Date.now() - startTime,
+          createdAt: Date.now(),
+        };
+        this.history.unshift(entry);
+        if (this.history.length > 200) this.history = this.history.slice(0, 200);
+        this.saveHistory();
+        this.renderResults();
+        this.renderHistory();
+
+      } catch (err) {
+        liveBody.classList.remove('streaming');
+        if (err.name === 'AbortError') {
+          liveBody.textContent += '\n\n[Stopped]';
+          Toast.show('Generation stopped.', 'info');
+        } else {
+          liveBody.textContent = `Error: ${err.message}`;
+          Toast.show(`API Error: ${err.message}`, 'error', 5000);
+        }
+      } finally {
+        this.streamController = null;
+        stopBtn.style.display = 'none';
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Test';
+      }
+    },
+
+    /* ── Results ── */
+    renderResults() {
+      const list = document.getElementById('results-list');
+      const empty = document.getElementById('results-empty');
+      const sessionResults = this.history.slice(0, 10);
+
+      if (sessionResults.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'flex';
+        return;
+      }
+      empty.style.display = 'none';
+      list.innerHTML = sessionResults.map(r => this.resultCardHtml(r)).join('');
+    },
+
+    resultCardHtml(r) {
+      const elapsed = (r.latencyMs / 1000).toFixed(2);
+      return `
+      <div class="result-card">
+        <div class="result-card-header">
+          <span class="result-model-badge">${escHtml(r.model)}</span>
+          <div class="result-meta">
+            <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>${r.tokens?.total ?? '—'} tokens</span>
+            <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${elapsed}s</span>
+            <span style="color:var(--text-muted)">${new Date(r.createdAt).toLocaleString()}</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(escHtml(r.response))}.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')).then(()=>Toast.show('Copied!','success'))" aria-label="Copy response">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <div class="result-body">${escHtml(r.response)}</div>
+      </div>`;
+    },
+
+    /* ── History ── */
+    renderHistory() {
+      const list = document.getElementById('history-list');
+      const empty = document.getElementById('history-empty');
+
+      if (this.history.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'flex';
+        document.getElementById('compare-panel').className = 'compare-panel';
+        return;
+      }
+      empty.style.display = 'none';
+
+      list.innerHTML = this.history.map(r => {
+        const isSelected = this.compareIds.includes(r.id);
+        const elapsed = (r.latencyMs / 1000).toFixed(2);
+        return `
+        <div class="history-card${isSelected ? ' selected-compare' : ''}" data-id="${escHtml(r.id)}" role="button" tabindex="0" aria-label="History entry ${escHtml(r.promptName)}">
+          <div class="history-card-header">
+            <span class="result-model-badge">${escHtml(r.model)}</span>
+            <div class="result-meta" style="flex:1">
+              <span>${escHtml(r.promptName)}</span>
+              <span>${r.tokens?.total ?? '—'} tok</span>
+              <span>${elapsed}s</span>
+            </div>
+            <span style="font-size:11px;color:var(--text-muted)">${new Date(r.createdAt).toLocaleTimeString()}</span>
+          </div>
+          <div class="history-card-body">${escHtml(r.response)}</div>
+        </div>`;
+      }).join('');
+
+      // Bind click for compare
+      list.querySelectorAll('.history-card').forEach(card => {
+        card.addEventListener('click', () => this.toggleCompare(card.dataset.id));
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') this.toggleCompare(card.dataset.id); });
+      });
+
+      this.renderCompare();
+    },
+
+    toggleCompare(id) {
+      if (this.compareIds.includes(id)) {
+        this.compareIds = this.compareIds.filter(x => x !== id);
+      } else if (this.compareIds.length < 2) {
+        this.compareIds.push(id);
+      } else {
+        this.compareIds = [this.compareIds[1], id];
+      }
+      this.renderHistory();
+    },
+
+    renderCompare() {
+      const panel = document.getElementById('compare-panel');
+      const hint = document.getElementById('compare-hint');
+      if (this.compareIds.length < 2) {
+        panel.className = 'compare-panel';
+        hint.textContent = `Select 2 entries to compare (${this.compareIds.length}/2 selected)`;
+        return;
+      }
+      hint.textContent = '2 entries selected — comparing below';
+      const [a, b] = this.compareIds.map(id => this.history.find(r => r.id === id));
+      if (!a || !b) return;
+
+      panel.className = 'compare-panel visible';
+      panel.innerHTML = [a, b].map((r, i) => `
+        <div class="compare-card">
+          <div class="compare-header">${escHtml(r.model)} — ${(r.latencyMs/1000).toFixed(2)}s — ${r.tokens?.total ?? '?'} tokens</div>
+          <div class="compare-body">${escHtml(r.response)}</div>
+        </div>
+      `).join('');
+    },
+
+    async clearHistory() {
+      const ok = await confirmDialog('Clear all history? This cannot be undone.');
+      if (!ok) return;
+      this.history = [];
+      this.compareIds = [];
+      this.saveHistory();
+      this.renderHistory();
+      this.renderResults();
+      Toast.show('History cleared.', 'info');
+    },
+
+    /* ── API Key management ── */
+    saveApiKey(provider) {
+      const input = document.getElementById(`key-${provider}`);
+      const val = input.value.trim();
+      if (!val) {
+        Store.remove(`pl_key_${provider}`);
+        Toast.show(`${provider} key removed.`, 'info');
+      } else {
+        Store.set(`pl_key_${provider}`, val);
+        Toast.show(`${provider} key saved.`, 'success');
+      }
+      input.value = '';
+      this.refreshApiKeyStatus();
+    },
+
+    refreshApiKeyStatus() {
+      for (const provider of ['openai', 'anthropic', 'google']) {
+        const key = Store.get(`pl_key_${provider}`, '');
+        const statusEl = document.getElementById(`key-${provider}-status`);
+        if (key) {
+          statusEl.textContent = `Set (…${key.slice(-4)})`;
+          statusEl.className = 'apikey-status set';
+        } else {
+          statusEl.textContent = 'Not set';
+          statusEl.className = 'apikey-status unset';
+        }
+      }
+    },
+
+    /* ── Import / Export ── */
+    exportData() {
+      const data = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        prompts: this.prompts,
+        history: this.history,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `promptlab-export-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      Toast.show('Data exported.', 'success');
+    },
+
+    showImportModal() {
+      document.getElementById('import-textarea').value = '';
+      document.getElementById('import-modal').classList.add('visible');
+      document.getElementById('import-textarea').focus();
+    },
+
+    hideImportModal() {
+      document.getElementById('import-modal').classList.remove('visible');
+    },
+
+    doImport() {
+      const raw = document.getElementById('import-textarea').value.trim();
+      if (!raw) {
+        // Try file input instead
+        document.getElementById('file-input').click();
+        return;
+      }
+      this.processImportJson(raw);
+    },
+
+    processImportJson(raw) {
+      try {
+        const data = JSON.parse(raw);
+        if (data.prompts && Array.isArray(data.prompts)) {
+          const existingIds = new Set(this.prompts.map(p => p.id));
+          for (const p of data.prompts) {
+            if (existingIds.has(p.id)) {
+              const idx = this.prompts.findIndex(x => x.id === p.id);
+              this.prompts[idx] = p;
+            } else {
+              this.prompts.push(p);
+            }
+          }
+          this.savePrompts();
+        }
+        if (data.history && Array.isArray(data.history)) {
+          const existingIds = new Set(this.history.map(h => h.id));
+          for (const h of data.history) {
+            if (!existingIds.has(h.id)) this.history.push(h);
+          }
+          this.history.sort((a, b) => b.createdAt - a.createdAt);
+          this.saveHistory();
+        }
+        this.renderSidebar();
+        this.renderHistory();
+        this.updateCategoryList();
+        this.hideImportModal();
+        Toast.show(`Imported ${data.prompts?.length || 0} prompts, ${data.history?.length || 0} history entries.`, 'success');
+      } catch {
+        Toast.show('Invalid JSON file.', 'error');
+      }
+    },
+
+    async resetAll() {
+      const ok = await confirmDialog('Reset EVERYTHING? All prompts, history, and settings will be permanently deleted.');
+      if (!ok) return;
+      const secondOk = await confirmDialog('Are you absolutely sure? This cannot be undone.');
+      if (!secondOk) return;
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('pl_')) localStorage.removeItem(key);
+      }
+      location.reload();
+    },
+
+    /* ── Tab switching ── */
+    switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const active = btn.dataset.tab === tab;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `panel-${tab}`);
+      });
+    },
+
+    /* ── Copy prompt ── */
+    copyPrompt() {
+      const content = document.getElementById('prompt-content').value;
+      const rendered = renderPrompt(content, this.varValues);
+      navigator.clipboard.writeText(rendered).then(() => {
+        Toast.show('Prompt copied to clipboard!', 'success');
+      }).catch(() => {
+        Toast.show('Clipboard access denied.', 'error');
+      });
+    },
+
+    /* ── Event bindings ── */
+    bindEvents() {
+      // New prompt
+      document.getElementById('btn-new-prompt').addEventListener('click', () => this.newPrompt());
+
+      // Search
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        this.renderSidebar(e.target.value);
+      });
+
+      // Content changes → update vars & preview
+      document.getElementById('prompt-content').addEventListener('input', () => {
+        this.updateVars();
+        this.updatePreview();
+      });
+      document.getElementById('prompt-name').addEventListener('input', () => {/* just typing */});
+
+      // Provider change
+      document.getElementById('provider-select').addEventListener('change', () => {
+        this.updateModelSelect();
+      });
+
+      // Save button
+      document.getElementById('btn-save').addEventListener('click', () => this.savePrompt());
+
+      // Run test
+      document.getElementById('btn-run').addEventListener('click', () => this.runTest());
+
+      // Stop stream
+      document.getElementById('btn-stop-stream').addEventListener('click', () => {
+        if (this.streamController) this.streamController.abort();
+      });
+
+      // Copy prompt
+      document.getElementById('btn-copy-prompt').addEventListener('click', () => this.copyPrompt());
+
+      // Tab buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+      });
+
+      // Settings tab header button
+      document.getElementById('btn-settings-tab').addEventListener('click', () => this.switchTab('settings'));
+
+      // Theme toggle
+      document.getElementById('theme-toggle').addEventListener('change', (e) => {
+        document.body.classList.toggle('light', e.target.checked);
+        Store.set('pl_theme', e.target.checked ? 'light' : 'dark');
+      });
+
+      // Export buttons
+      document.getElementById('btn-export-global').addEventListener('click', () => this.exportData());
+      document.getElementById('btn-export-data').addEventListener('click', () => this.exportData());
+
+      // Import buttons
+      document.getElementById('btn-import-global').addEventListener('click', () => this.showImportModal());
+      document.getElementById('btn-import-data').addEventListener('click', () => this.showImportModal());
+      document.getElementById('btn-import-cancel').addEventListener('click', () => this.hideImportModal());
+      document.getElementById('btn-import-confirm').addEventListener('click', () => this.doImport());
+      document.getElementById('import-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) this.hideImportModal();
+      });
+
+      // File input for import
+      document.getElementById('file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => { this.processImportJson(ev.target.result); };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      // Clear history
+      document.getElementById('btn-clear-history').addEventListener('click', () => this.clearHistory());
+
+      // Reset all
+      document.getElementById('btn-reset-all').addEventListener('click', () => this.resetAll());
+
+      // Mobile menu
+      document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        const open = sidebar.classList.toggle('mobile-open');
+        document.getElementById('mobile-menu-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        const ctrl = e.ctrlKey || e.metaKey;
+        if (ctrl && e.key === 's') { e.preventDefault(); this.savePrompt(); }
+        if (ctrl && e.key === 'Enter') { e.preventDefault(); this.runTest(); }
+        if (ctrl && e.key === 'n') { e.preventDefault(); this.newPrompt(); }
+        if (e.key === 'Escape') {
+          this.hideImportModal();
+          document.getElementById('confirm-modal').classList.remove('visible');
+          document.getElementById('sidebar').classList.remove('mobile-open');
+        }
+      });
+    },
+  };
+
+  /* ── Bootstrap ── */
+  document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
